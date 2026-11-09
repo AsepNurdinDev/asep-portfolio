@@ -1,0 +1,352 @@
+openapi: 3.1.0
+info:
+  title: Asep Nurdin Portfolio API
+  version: 1.0.0
+  description: Initial API contract. Sanctum stateful SPA session authentication.
+servers:
+  - url: https://portfolio.example.com/api/v1
+    description: Replace with canonical production origin
+  - url: http://localhost/api/v1
+    description: Local Nginx entrypoint
+tags:
+  - name: Public
+  - name: Admin
+  - name: Contact
+paths:
+  /health:
+    get:
+      tags: [Public]
+      summary: Minimal health check
+      responses:
+        "200":
+          description: Healthy
+  /home:
+    get:
+      tags: [Public]
+      summary: Aggregated homepage content
+      responses:
+        "200":
+          description: Homepage data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      profile: { $ref: "#/components/schemas/Profile" }
+                      focus_areas:
+                        type: array
+                        items: { $ref: "#/components/schemas/FocusArea" }
+                      featured_projects:
+                        type: array
+                        items: { $ref: "#/components/schemas/Project" }
+  /profile:
+    get:
+      tags: [Public]
+      summary: Public profile
+      responses:
+        "200":
+          description: Profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileResponse"
+  /focus-areas:
+    get:
+      tags: [Public]
+      summary: Active focus areas
+      responses:
+        "200":
+          description: Focus areas
+  /projects:
+    get:
+      tags: [Public]
+      summary: Published projects
+      parameters:
+        - in: query
+          name: category
+          schema: { type: string }
+        - in: query
+          name: type
+          schema: { type: string, enum: [personal, client, learning, research] }
+        - in: query
+          name: technology
+          schema: { type: string }
+        - in: query
+          name: search
+          schema: { type: string, maxLength: 100 }
+        - in: query
+          name: featured
+          schema: { type: boolean }
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+        - in: query
+          name: per_page
+          schema: { type: integer, minimum: 1, maximum: 24, default: 12 }
+      responses:
+        "200":
+          description: Paginated projects
+  /projects/{slug}:
+    get:
+      tags: [Public]
+      summary: Published project detail
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Project detail
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /technologies:
+    get:
+      tags: [Public]
+      summary: Active technologies
+      responses:
+        "200":
+          description: Technologies
+  /experiences:
+    get:
+      tags: [Public]
+      summary: Visible experiences
+      responses:
+        "200":
+          description: Experiences
+  /educations:
+    get:
+      tags: [Public]
+      summary: Visible education
+      responses:
+        "200":
+          description: Education
+  /certifications:
+    get:
+      tags: [Public]
+      summary: Visible certifications
+      responses:
+        "200":
+          description: Certifications
+  /featured-articles:
+    get:
+      tags: [Public]
+      summary: Featured external blog links
+      responses:
+        "200":
+          description: Articles
+  /navigation:
+    get:
+      tags: [Public]
+      summary: Visible navigation
+      responses:
+        "200":
+          description: Navigation items
+  /site-settings:
+    get:
+      tags: [Public]
+      summary: Whitelisted public settings
+      responses:
+        "200":
+          description: Public settings
+  /contact-messages:
+    post:
+      tags: [Contact]
+      summary: Submit an inquiry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ContactInput" }
+      responses:
+        "201":
+          description: Accepted
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /admin/me:
+    get:
+      tags: [Admin]
+      summary: Current admin
+      security: [{ sanctumSession: [] }]
+      responses:
+        "200":
+          description: Current authenticated admin
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+  /admin/dashboard:
+    get:
+      tags: [Admin]
+      summary: Dashboard summary
+      security: [{ sanctumSession: [] }]
+      responses:
+        "200":
+          description: Dashboard summary
+  /admin/projects:
+    get:
+      tags: [Admin]
+      summary: List projects including drafts
+      security: [{ sanctumSession: [] }]
+      responses:
+        "200":
+          description: Project collection
+    post:
+      tags: [Admin]
+      summary: Create project
+      security: [{ sanctumSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProjectInput" }
+      responses:
+        "201":
+          description: Created
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /admin/projects/{id}:
+    put:
+      tags: [Admin]
+      summary: Update project
+      security: [{ sanctumSession: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProjectInput" }
+      responses:
+        "200":
+          description: Updated
+    delete:
+      tags: [Admin]
+      summary: Delete project
+      security: [{ sanctumSession: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+  /admin/media:
+    post:
+      tags: [Admin]
+      summary: Upload media
+      security: [{ sanctumSession: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+                alt_text: { type: string, maxLength: 250 }
+      responses:
+        "201":
+          description: Uploaded
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /admin/site-settings:
+    get:
+      tags: [Admin]
+      summary: Editable settings
+      security: [{ sanctumSession: [] }]
+      responses:
+        "200":
+          description: Settings
+    put:
+      tags: [Admin]
+      summary: Update allowlisted settings
+      security: [{ sanctumSession: [] }]
+      responses:
+        "200":
+          description: Updated
+components:
+  securitySchemes:
+    sanctumSession:
+      type: apiKey
+      in: cookie
+      name: portfolio_session
+      description: Illustrative cookie name. Actual Laravel session cookie is configured per deployment. Obtain /sanctum/csrf-cookie and send X-XSRF-TOKEN for state-changing requests.
+  schemas:
+    Profile:
+      type: object
+      properties:
+        display_name: { type: string }
+        professional_title: { type: [string, "null"] }
+        headline: { type: [string, "null"] }
+        short_bio: { type: [string, "null"] }
+        location: { type: [string, "null"] }
+        avatar_url: { type: [string, "null"], format: uri }
+        resume_url: { type: [string, "null"], format: uri }
+    ProfileResponse:
+      type: object
+      properties:
+        data: { $ref: "#/components/schemas/Profile" }
+    FocusArea:
+      type: object
+      properties:
+        title: { type: string }
+        slug: { type: string }
+        description: { type: [string, "null"] }
+        icon_key: { type: [string, "null"] }
+    Project:
+      type: object
+      properties:
+        title: { type: string }
+        slug: { type: string }
+        summary: { type: [string, "null"] }
+        project_type: { type: string, enum: [personal, client, learning, research] }
+        project_status: { type: string, enum: [planned, in_progress, completed, archived] }
+        publication_status: { type: string, enum: [draft, published] }
+    ProjectInput:
+      type: object
+      required: [title, slug, project_type, project_status, publication_status]
+      properties:
+        title: { type: string, maxLength: 180 }
+        slug: { type: string, maxLength: 200 }
+        summary: { type: [string, "null"], maxLength: 500 }
+        project_type: { type: string, enum: [personal, client, learning, research] }
+        project_status: { type: string, enum: [planned, in_progress, completed, archived] }
+        publication_status: { type: string, enum: [draft, published] }
+        is_featured: { type: boolean, default: false }
+        repository_url: { type: [string, "null"], format: uri }
+        live_url: { type: [string, "null"], format: uri }
+        documentation_url: { type: [string, "null"], format: uri }
+    ContactInput:
+      type: object
+      required: [inquiry_type, name, email, message]
+      properties:
+        inquiry_type: { type: string, enum: [career, collaboration] }
+        name: { type: string, minLength: 2, maxLength: 100 }
+        email: { type: string, format: email }
+        subject: { type: [string, "null"], maxLength: 180 }
+        message: { type: string, minLength: 10, maxLength: 5000 }
+  responses:
+    Unauthenticated:
+      description: Authentication required
+    NotFound:
+      description: Resource not found
+    ValidationError:
+      description: Validation failed
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message: { type: string }
+              errors: { type: object, additionalProperties: { type: array, items: { type: string } } }
+    RateLimited:
+      description: Too many requests
